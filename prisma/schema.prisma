@@ -1,0 +1,58 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+model News {
+  id           String            @id @default(cuid())
+  title        String
+  description  String?
+  readDuration String?
+  content      Json
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  // Full-text search vector (maintained by database trigger)
+  searchVector Unsupported("tsvector")?
+
+  // Relation field to the map table
+  categories   NewsCategoryMap[]
+
+  @@index([searchVector], type: Gin, map: "idx_news_search_vector")
+  @@index([title(ops: raw("gin_trgm_ops"))], type: Gin, map: "idx_news_title_trgm")
+  @@index([description(ops: raw("gin_trgm_ops"))], type: Gin, map: "idx_news_description_trgm")
+}
+
+model Category {
+  id        String            @id @default(cuid())
+  name      String
+  slug      String            @unique
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  // Relation field to the map table
+  news      NewsCategoryMap[]
+
+  @@index([name(ops: raw("gin_trgm_ops"))], type: Gin, map: "idx_category_name_trgm")
+}
+
+model NewsCategoryMap {
+  newsId     String
+  categoryId String
+
+  news       News     @relation(fields: [newsId], references: [id], onDelete: Cascade)
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([newsId, categoryId], name: "news_category_pkey")
+  @@index([categoryId], map: "idx_news_category_map_category_id")
+}
