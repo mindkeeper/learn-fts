@@ -7,7 +7,7 @@ import { ApiTags, ApiQuery } from '@nestjs/swagger';
 export class NewsController {
   constructor(private readonly newsService: NewsService) {}
 
-  @Get('search')
+  @Get('')
   @ApiQuery({
     name: 'q',
     required: false,
